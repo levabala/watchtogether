@@ -11,5 +11,8 @@
     "tsc": "tsc --noEmit",
     "format": "prettier --write src"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "peerjs": "^1.5.4"
+  }
 }

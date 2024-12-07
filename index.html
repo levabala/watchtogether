@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>HTML5 Video Player with Subtitles</title>
+        <title>WebRTC with PeerJS</title>
     </head>
     <body>
         <h3>Select Video:</h3>
@@ -11,7 +11,20 @@
         <h3>Select Subtitles:</h3>
         <input type="file" id="subtitleInput" accept=".vtt,.srt" />
         <h3>Video Player</h3>
-        <video id="videoPlayer" controls style="width: 100%"></video>
+        <video
+            id="videoPlayer"
+            autoplay
+            muted
+            controls
+            style="width: 100%"
+        ></video>
+        <h3>Actions</h3>
+        <button id="startStream">Start Streaming</button>
+        <button id="connectReceiver">Connect as Receiver</button>
+        <input type="text" id="peerIdInput" placeholder="Enter Peer ID" />
+        <h3>Peer ID</h3>
+        <textarea id="myPeerId" readonly></textarea>
+        <script src="https://unpkg.com/peerjs"></script>
         <script src="./.build/index.js" type="module"></script>
     </body>
 </html>
