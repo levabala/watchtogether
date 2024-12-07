@@ -1,15 +1,15 @@
 {
   "name": "watchtogether",
-  "type": "module",
-  "scripts": {
-    "build:dev": "bun build src/index.ts --outdir .build --target=browser --sourcemap=linked",
-    "tsc": "tsc --noEmit",
-    "format": "prettier --write src"
-  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
-  }
+  },
+  "scripts": {
+    "build:dev": "bun build src/index.ts --outdir .build --target=browser --sourcemap=linked",
+    "tsc": "tsc --noEmit",
+    "format": "prettier --write src"
+  },
+  "type": "module"
 }

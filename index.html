@@ -1,52 +1,17 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <title>List Tracks with Video.js</title>
-        <link
-            href="https://vjs.zencdn.net/8.0.4/video-js.css"
-            rel="stylesheet"
-        />
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>HTML5 Video Player with Subtitles</title>
     </head>
     <body>
         <h3>Select Video:</h3>
-        <input type="file" id="videoInput" accept="video/*,.mkv" />
+        <input type="file" id="videoInput" accept="video/*" />
+        <h3>Select Subtitles:</h3>
+        <input type="file" id="subtitleInput" accept=".vtt,.srt" />
         <h3>Video Player</h3>
-        <video
-            id="videoPlayer"
-            class="video-js"
-            controls
-            preload="auto"
-            style="width: 100%"
-        ></video>
-
-        <script src="https://vjs.zencdn.net/8.20.0/video.min.js"></script>
-        <script>
-            const videoInput = document.getElementById("videoInput");
-            const player = videojs("videoPlayer");
-
-            videoInput.addEventListener("change", () => {
-                const file = videoInput.files[0];
-                if (file) {
-                    const videoURL = URL.createObjectURL(file);
-                    player.src({ src: videoURL, type: file.type });
-
-                    player.on("loadeddata", () => {
-                        console.log("Tracks:");
-
-                        // List video tracks
-                        const videoTracks = player.videoTracks();
-                        console.log("Video Tracks:", videoTracks);
-
-                        // List audio tracks
-                        const audioTracks = player.audioTracks();
-                        console.log("Audio Tracks:", audioTracks);
-
-                        // List text tracks (e.g., subtitles)
-                        const textTracks = player.textTracks();
-                        console.log("Text Tracks:", textTracks);
-                    });
-                }
-            });
-        </script>
+        <video id="videoPlayer" controls style="width: 100%"></video>
+        <script src="./.build/index.js" type="module"></script>
     </body>
 </html>
