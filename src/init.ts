@@ -25,10 +25,19 @@ videoInput.addEventListener("change", () => {
     }
 });
 
+const idMy = new URL(window.location.href).searchParams.get("myid");
+const idTarget = new URL(window.location.href).searchParams.get("targetid");
+
+if (idTarget) {
+    peerIdInput.value = idTarget;
+}
+
 export const state = {
-    peer: new Peer(),
+    peer: idMy ? new Peer(idMy) : new Peer(),
     connection: null as DataConnection | null,
 };
+
+(window as any).state = state;
 
 // Initialize PeerJS
 function initializePeer() {

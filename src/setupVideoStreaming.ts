@@ -34,6 +34,8 @@ async function startStreaming() {
         console.error("Call error:", err);
     });
 
+    (window as any).call = call;
+
     // Periodically send playback time
     function syncPlaybackTime() {
         setInterval(() => {
@@ -45,7 +47,119 @@ async function startStreaming() {
             }
         }, 500); // Adjust interval as needed
     }
+
     syncPlaybackTime();
+
+    configureSenderParameters(call.peerConnection);
+    configureReceiverParameters(call.peerConnection);
+    preferCodec(call.peerConnection, "VP9");
+
+    logStats(call.peerConnection);
+}
+
+function logStats(peerConnection: RTCPeerConnection) {
+    let previousStats: { bytesSent: number; timestamp: number } | null = null;
+
+    async function calculateBitrate(peerConnection: RTCPeerConnection) {
+        const stats = await peerConnection.getStats();
+        stats.forEach((report) => {
+            if (report.type === "outbound-rtp" && report.kind === "video") {
+                const currentBytesSent = report.bytesSent;
+                const currentTimestamp = report.timestamp;
+
+                if (previousStats) {
+                    const deltaBytes =
+                        currentBytesSent - previousStats.bytesSent;
+                    const deltaTime =
+                        currentTimestamp - previousStats.timestamp;
+
+                    // Calculate bitrate in bits per second (bps)
+                    const bitrate = (deltaBytes * 8) / (deltaTime / 1000) / 1_000_000;
+                    console.log(`Current bitrate: ${bitrate.toFixed(2)} Mbps`);
+                }
+
+                // Update previous stats
+                previousStats = {
+                    bytesSent: currentBytesSent,
+                    timestamp: currentTimestamp,
+                };
+            }
+        });
+    }
+
+    // Call periodically to monitor bitrate
+    setInterval(() => calculateBitrate(peerConnection), 1000); // Every second
+}
+
+function configureSenderParameters(peerConnection: RTCPeerConnection) {
+    const videoSender = peerConnection
+        .getSenders()
+        .find((sender) => sender.track?.kind === "video");
+
+    console.log("Video senders:", peerConnection.getSenders());
+
+    if (videoSender) {
+        const parameters = videoSender.getParameters();
+        if (!parameters.encodings) {
+            parameters.encodings = [{}];
+        }
+
+        // Configure encoding for high quality
+        parameters.encodings[0].maxBitrate = 10000 * 1000;
+        parameters.encodings[0].maxFramerate = 60;
+        parameters.encodings[0].scaleResolutionDownBy = 1; // No resolution scaling
+        parameters.encodings[0].networkPriority = "high";
+        parameters.encodings[0].priority = "high";
+
+        console.log(parameters.encodings[0]);
+
+        // Maintain resolution over framerate
+        parameters.degradationPreference = "maintain-resolution";
+        videoSender.setParameters(parameters);
+
+        console.log("Configured video sender parameters:", parameters);
+    } else {
+        console.error("No video sender found.");
+    }
+}
+
+async function preferCodec(
+    peerConnection: RTCPeerConnection,
+    codecName: string,
+) {
+    const transceivers = peerConnection.getTransceivers();
+
+    transceivers.forEach((transceiver) => {
+        if (transceiver.sender.track?.kind === "video") {
+            const codecs = RTCRtpSender.getCapabilities("video")?.codecs || [];
+            const preferredCodecs = codecs.filter((c) =>
+                c.mimeType.includes(codecName),
+            );
+            if (preferredCodecs.length) {
+                transceiver.setCodecPreferences(preferredCodecs);
+                console.log(`Preferred codec set to: ${codecName}`);
+            } else {
+                console.warn(`Codec ${codecName} not found.`);
+            }
+        }
+    });
+}
+
+function configureReceiverParameters(peerConnection: RTCPeerConnection) {
+    const videoReceiver = peerConnection
+        .getReceivers()
+        .find((receiver) => receiver.track?.kind === "video");
+
+    console.log("Video senders:", peerConnection.getSenders());
+
+    if (videoReceiver) {
+        (videoReceiver as any).playoutDelayHint = 3000;
+        videoReceiver.jitterBufferTarget = 3000;
+
+        console.log("Configured video sender parameters");
+    } else {
+        console.error("No video sender found.");
+    }
 }
 
 let subtitlesRaw = "";
@@ -108,11 +222,17 @@ function syncVideo(targetTime: number) {
     if (Math.abs(driftCompensated) > 0.2) {
         currentShift = drift;
 
-        console.log({ targetTime, currentTime, currentShift, drift, driftCompensated });
+        console.log({
+            targetTime,
+            currentTime,
+            currentShift,
+            drift,
+            driftCompensated,
+        });
 
         removeSubtitles();
         const shifted = shiftVVT(subtitlesRaw, drift);
-        console.log({shifted, subtitlesRaw});
+        console.log({ shifted, subtitlesRaw });
         const url = subtitlesRawToBlobUrl(shifted);
         addSubtitleTrack(url);
 
