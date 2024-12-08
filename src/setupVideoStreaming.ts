@@ -25,7 +25,7 @@ async function startStreaming() {
     const stream = (videoPlayer as any).captureStream();
     console.log("Captured video stream:", stream);
 
-    for (const [peerId] of state.connectionsToReceivers) {
+    for (const [peerId, connection] of state.connectionsToReceivers) {
         console.log("Calling:", peerId);
 
         // Call the receiver's peer ID
@@ -41,11 +41,13 @@ async function startStreaming() {
         // Periodically send playback time
         function syncPlaybackTime() {
             setInterval(() => {
-                if (state.connectionToStreamer && videoPlayer.readyState >= 2) {
-                    state.connectionToStreamer.send({
+                if (connection && videoPlayer.readyState >= 2) {
+                    connection.send({
                         type: "sync",
                         time: videoPlayer.currentTime,
                     });
+                } else {
+                    console.warn("syncPlaybackTime: No connection to receiver.");
                 }
             }, 500); // Adjust interval as needed
         }
