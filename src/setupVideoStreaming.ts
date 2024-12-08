@@ -66,7 +66,10 @@ function logStats() {
         { bytesSent: number; timestamp: number }
     > = new Map();
 
-    async function calculateBitrate(peerConnection: RTCPeerConnection, peerId: string) {
+    async function calculateBitrate(
+        peerConnection: RTCPeerConnection,
+        peerId: string,
+    ) {
         const stats = await peerConnection.getStats();
         let report: any;
 
@@ -117,7 +120,7 @@ function logStats() {
 
             bitrates.push(bitrate.toFixed(2));
         }
-        const str = bitrates.join('/') + " Mbps";
+        const str = bitrates.join("/") + " Mbps";
         bitrateInput.value = str;
     }, 1000); // Every second
 }
@@ -271,6 +274,16 @@ function syncVideo(targetTime: number) {
 // Event Listeners
 startStreamButton.addEventListener("click", startStreaming);
 connectReceiverButton.addEventListener("click", connectAsReceiver);
+
+state.peer.on("open", () => {
+    const autoconnect = new URL(window.location.href).searchParams.get(
+        "autoconnect",
+    );
+
+    if (autoconnect === "as-receiver") {
+        connectAsReceiver();
+    }
+});
 
 function removeSubtitles() {
     const existingTracks = videoPlayer.querySelectorAll("track");
