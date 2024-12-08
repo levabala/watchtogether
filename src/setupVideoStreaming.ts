@@ -1,9 +1,7 @@
 import {
     videoPlayer,
-    videoInput,
     peerIdInput,
     subtitleInput,
-    myPeerIdTextarea,
     startStreamButton,
     connectReceiverButton,
     state,
@@ -235,10 +233,6 @@ function connectAsReceiver() {
         console.log("Connected to sender:", peerId);
     });
 
-    // connection.on("data", (data) => {
-    //     console.log("Data received from sender:", data);
-    // });
-
     connection.on("error", (err) => {
         console.error("Connection error:", err);
     });
@@ -303,40 +297,6 @@ function addSubtitleTrack(subtitleURL: string): void {
 
     videoPlayer.appendChild(trackElement);
     console.log(`Added subtitle track: ${subtitleURL}`);
-}
-
-function shiftSubtitlesInPlace(drift: number): void {
-    console.log("shiftSubtitles", drift);
-    const textTracks = videoPlayer.textTracks;
-
-    if (textTracks.length === 0) {
-        console.error("No subtitles loaded.");
-        return;
-    }
-
-    // Use the first text track (adjust as needed for multi-track scenarios)
-    const subtitleTrack = textTracks[0];
-
-    if (!subtitleTrack || !subtitleTrack.cues) {
-        console.error("No subtitle track found.");
-        return;
-    }
-
-    // Ensure the track is showing (optional, can be "hidden" too)
-    subtitleTrack.mode = "showing";
-
-    // Adjust the timing of each cue
-    for (let i = 0; i < subtitleTrack.cues.length; i++) {
-        const cue = subtitleTrack.cues[i] as VTTCue;
-        if (i < 3 || i > subtitleTrack.cues.length - 3)
-            console.log("before", cue.startTime);
-        cue.startTime += drift;
-        if (i < 3 || i > subtitleTrack.cues.length - 3)
-            console.log("after", cue.startTime);
-        cue.endTime += drift;
-    }
-
-    console.log(`Shifted subtitles by ${drift} seconds.`);
 }
 
 // Handle subtitle input file and create a track
