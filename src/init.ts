@@ -39,6 +39,9 @@ const idMy =
 const idTarget = new URL(window.location.href).searchParams.get("targetid");
 const host = new URL(window.location.href).searchParams.get("host");
 const key = new URL(window.location.href).searchParams.get("key");
+const turnUrl = new URL(window.location.href).searchParams.get("turnurl");
+const turnUser = new URL(window.location.href).searchParams.get("turnuser");
+const turnPass = new URL(window.location.href).searchParams.get("turnpass");
 
 if (!key) {
     throw new Error("Missing key query param");
@@ -58,6 +61,15 @@ export const state = {
         key,
         port: 9000,
         secure: false,
+        config: {
+            iceServers: [
+                {
+                    urls: turnUrl,
+                    username: turnUser,
+                    credential: turnPass,
+                },
+            ],
+        },
     }),
     connectionToStreamer: null as DataConnection | null,
     connectionsToReceivers: new Map<string, DataConnection>(),
@@ -101,6 +113,35 @@ function initializePeer() {
             videoPlayer.srcObject = remoteStream;
         });
     });
+
+    state.peer.on("call", (call) => {
+        call.answer(); // Answer the call
+
+        const peerConnection = call.peerConnection;
+
+        peerConnection.addEventListener("icecandidate", (event) => {
+            if (event.candidate) {
+                console.log(
+                    "ICE Candidate Type:",
+                    getCandidateType(event.candidate.candidate),
+                );
+            }
+        });
+
+        peerConnection.addEventListener("iceconnectionstatechange", () => {
+            console.log(
+                "ICE Connection State:",
+                peerConnection.iceConnectionState,
+            );
+        });
+    });
+
+    function getCandidateType(candidate: string) {
+        if (candidate.includes("typ relay")) return "TURN (Relay)";
+        if (candidate.includes("typ srflx")) return "STUN (Server Reflexive)";
+        if (candidate.includes("typ host")) return "P2P (Host)";
+        return "Unknown";
+    }
 }
 
 initializePeer();
