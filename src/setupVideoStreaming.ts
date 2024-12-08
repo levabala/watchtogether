@@ -158,14 +158,14 @@ function configureSenderParameters(peerConnection: RTCPeerConnection) {
         // Configure encoding for high quality
         parameters.encodings[0].maxBitrate = 10000 * 1000;
         parameters.encodings[0].maxFramerate = 60;
-        parameters.encodings[0].scaleResolutionDownBy = 1; // No resolution scaling
+        // parameters.encodings[0].scaleResolutionDownBy = 1; // No resolution scaling
         parameters.encodings[0].networkPriority = "high";
         parameters.encodings[0].priority = "high";
 
         console.log(parameters.encodings[0]);
 
         // Maintain resolution over framerate
-        parameters.degradationPreference = "maintain-resolution";
+        parameters.degradationPreference = "balanced";
         videoSender.setParameters(parameters);
 
         console.log("Configured video sender parameters:", parameters);
