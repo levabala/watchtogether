@@ -15,6 +15,7 @@ export const videoInput = document.getElementById("videoInput") as HTMLInputElem
 export const subtitleInput = document.getElementById(
     "subtitleInput",
 ) as HTMLInputElement;
+export const bitrateInput = document.getElementById("bitrate") as HTMLInputElement;
 
 videoInput.addEventListener("change", () => {
     const file = videoInput.files?.[0];

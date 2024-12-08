@@ -7,6 +7,7 @@ import {
     startStreamButton,
     connectReceiverButton,
     state,
+    bitrateInput,
 } from "./init";
 import { shiftVVT } from "./shiftVVT";
 
@@ -17,7 +18,12 @@ async function startStreaming() {
         return;
     }
 
-    const peerId = peerIdInput.value.trim();
+    if (!state.connection) {
+        console.error("Connection not initialized.");
+        return;
+    }
+
+    const peerId = state.connection.peer;
     if (!peerId) {
         console.error("Please enter a Peer ID to connect to.");
         return;
@@ -75,7 +81,7 @@ function logStats(peerConnection: RTCPeerConnection) {
 
                     // Calculate bitrate in bits per second (bps)
                     const bitrate = (deltaBytes * 8) / (deltaTime / 1000) / 1_000_000;
-                    console.log(`Current bitrate: ${bitrate.toFixed(2)} Mbps`);
+                    bitrateInput.value = bitrate.toFixed(2) + " Mbps";
                 }
 
                 // Update previous stats

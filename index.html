@@ -10,7 +10,7 @@
         <input type="file" id="videoInput" accept="video/*" />
         <h3>Select Subtitles:</h3>
         <input type="file" id="subtitleInput" accept=".vtt,.srt" />
-            <button id="sendSubtitle">Send Subtitle</button>
+        <button id="sendSubtitle">Send Subtitle</button>
         <h3>Video Player</h3>
         <video
             id="videoPlayer"
@@ -23,8 +23,16 @@
         <button id="startStream">Start Streaming</button>
         <button id="connectReceiver">Connect as Receiver</button>
         <input type="text" id="peerIdInput" placeholder="Enter Peer ID" />
-        <h3>Peer ID</h3>
-        <textarea id="myPeerId" readonly></textarea>
+        <div style="display: flex; gap: 10px">
+            <div>
+                <h3>Peer ID</h3>
+                <textarea id="myPeerId" readonly></textarea>
+            </div>
+            <div>
+                <h3>Bitrate</h3>
+                <input id="bitrate" readonly />
+            </div>
+        </div>
         <script src="./.build/index.js" type="module"></script>
     </body>
 </html>
