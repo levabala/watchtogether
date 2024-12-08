@@ -6,8 +6,62 @@ import {
     connectReceiverButton,
     state,
     bitrateInput,
+    VIDEO_DELAY_MS,
 } from "./init";
 import { shiftVVT } from "./shiftVVT";
+
+const streamCamera = new URL(window.location.href).searchParams.get(
+    "streamCamera",
+);
+
+if (streamCamera === "1") {
+    captureSpecificCamera().then(() => {
+        state.peer.on("connection", () => {
+            startStreaming();
+        });
+    });
+}
+
+async function captureSpecificCamera() {
+    try {
+        const videoDevices = await getVideoDevices();
+
+        // Log available video devices
+        console.log("Available video devices:", videoDevices);
+
+        // Find a non-virtual camera (replace "OBS Virtual Camera" with its exact label if needed)
+        const targetDevice = videoDevices.find(
+            (device) => !device.label.includes("Virtual"),
+        );
+
+        if (!targetDevice) {
+            throw new Error("No physical camera found");
+        }
+
+        // Request media with the specific device
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                deviceId: { exact: targetDevice.deviceId },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                frameRate: { ideal: 60, max: 60 },
+            },
+        });
+
+        // Attach to video element
+        videoPlayer.srcObject = stream;
+        videoPlayer.play();
+
+        console.log("Camera stream started");
+    } catch (error) {
+        console.error("Error capturing camera:", error);
+    }
+}
+
+async function getVideoDevices() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter((device) => device.kind === "videoinput");
+}
 
 // Start streaming video to the receiver
 async function startStreaming() {
@@ -23,6 +77,7 @@ async function startStreaming() {
 
     // Capture video stream from videoPlayer
     const stream = (videoPlayer as any).captureStream();
+
     console.log("Captured video stream:", stream);
 
     for (const [peerId, connection] of state.connectionsToReceivers) {
@@ -30,7 +85,7 @@ async function startStreaming() {
 
         // Call the receiver's peer ID
         const call = state.peer.call(peerId, stream);
-        state.calls.set(peerId, call.peerConnection);
+        state.callsToReceivers.set(peerId, call.peerConnection);
 
         console.log("Successfully called:", peerId);
 
@@ -47,20 +102,22 @@ async function startStreaming() {
                         time: videoPlayer.currentTime,
                     });
                 } else {
-                    console.warn("syncPlaybackTime: No connection to receiver.");
+                    console.warn(
+                        "syncPlaybackTime: No connection to receiver.",
+                    );
                 }
             }, 500); // Adjust interval as needed
         }
 
-        videoPlayer.addEventListener('pause', () => {
-            console.log('videoPlayer paused');
+        videoPlayer.addEventListener("pause", () => {
+            console.log("videoPlayer paused");
             connection.send({
                 type: "pause",
             });
         });
 
-        videoPlayer.addEventListener('play', () => {
-            console.log('videoPlayer played');
+        videoPlayer.addEventListener("play", () => {
+            console.log("videoPlayer played");
             connection.send({
                 type: "play",
                 time: videoPlayer.currentTime,
@@ -70,7 +127,7 @@ async function startStreaming() {
         syncPlaybackTime();
 
         configureSenderParameters(call.peerConnection);
-        configureReceiverParameters(call.peerConnection);
+        // configureReceiverParameters(call.peerConnection);
         preferCodec(call.peerConnection, "VP9");
     }
 
@@ -128,7 +185,7 @@ function logStats() {
     // Call periodically to monitor bitrate
     setInterval(async () => {
         let bitrates = [];
-        for (const [peerId, peerConnection] of state.calls) {
+        for (const [peerId, peerConnection] of state.callsToReceivers) {
             const bitrate = await calculateBitrate(peerConnection, peerId);
 
             if (!bitrate) {
@@ -196,22 +253,22 @@ async function preferCodec(
     });
 }
 
-function configureReceiverParameters(peerConnection: RTCPeerConnection) {
-    const videoReceiver = peerConnection
-        .getReceivers()
-        .find((receiver) => receiver.track?.kind === "video");
+// function configureReceiverParameters(peerConnection: RTCPeerConnection) {
+//     const videoReceiver = peerConnection
+//         .getReceivers()
+//         .find((receiver) => receiver.track?.kind === "video");
 
-    console.log("Video senders:", peerConnection.getSenders());
+//     console.log("Video receivers:", peerConnection.getReceivers());
 
-    if (videoReceiver) {
-        (videoReceiver as any).playoutDelayHint = 3000;
-        videoReceiver.jitterBufferTarget = 3000;
+//     if (videoReceiver) {
+//         (videoReceiver as any).playoutDelayHint = 1;
+//         videoReceiver.jitterBufferTarget = 1000;
 
-        console.log("Configured video sender parameters");
-    } else {
-        console.error("No video sender found.");
-    }
-}
+//         console.log("Configured video sender parameters");
+//     } else {
+//         console.error("No video sender found.");
+//     }
+// }
 
 let subtitlesRaw = "";
 
@@ -269,7 +326,7 @@ let currentShift = 0;
 
 // Sync video playback time
 function syncVideo(targetTime: number) {
-    const currentTime = videoPlayer.currentTime;
+    const currentTime = videoPlayer.currentTime + VIDEO_DELAY_MS / 1000;
     const drift = currentTime - targetTime;
     const driftCompensated = drift - currentShift;
 

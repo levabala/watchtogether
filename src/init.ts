@@ -73,7 +73,8 @@ export const state = {
     }),
     connectionToStreamer: null as DataConnection | null,
     connectionsToReceivers: new Map<string, DataConnection>(),
-    calls: new Map<string, RTCPeerConnection>(),
+    callsToReceivers: new Map<string, RTCPeerConnection>(),
+    callToStreamer: null as RTCPeerConnection | null,
 };
 
 window.addEventListener("beforeunload", () => {
@@ -87,6 +88,8 @@ window.addEventListener("beforeunload", () => {
 });
 
 (window as any).state = state;
+
+export const VIDEO_DELAY_MS = 500;
 
 // Initialize PeerJS
 function initializePeer() {
@@ -133,6 +136,16 @@ function initializePeer() {
                 "ICE Connection State:",
                 peerConnection.iceConnectionState,
             );
+        });
+
+        state.callToStreamer = call.peerConnection;
+
+        peerConnection.addEventListener("track", (event) => {
+            console.log("------------- track added", event);
+            const receiver = event.receiver;
+
+            receiver.playoutDelayHint = VIDEO_DELAY_MS / 1000;
+            // receiver.jitterBufferTarget = VIDEO_DELAY_MS;
         });
     });
 
