@@ -70,6 +70,7 @@ export const state = {
                 },
             ],
         },
+        // debug: 3,
     }),
     connectionToStreamer: null as DataConnection | null,
     connectionsToReceivers: new Map<string, DataConnection>(),
@@ -144,7 +145,7 @@ function initializePeer() {
             console.log("------------- track added", event);
             const receiver = event.receiver;
 
-            receiver.playoutDelayHint = VIDEO_DELAY_MS / 1000;
+            (receiver as any).playoutDelayHint = VIDEO_DELAY_MS / 1000;
             // receiver.jitterBufferTarget = VIDEO_DELAY_MS;
         });
     });
