@@ -52,6 +52,21 @@ async function startStreaming() {
             }, 500); // Adjust interval as needed
         }
 
+        videoPlayer.addEventListener('pause', () => {
+            console.log('videoPlayer paused');
+            connection.send({
+                type: "pause",
+            });
+        });
+
+        videoPlayer.addEventListener('play', () => {
+            console.log('videoPlayer played');
+            connection.send({
+                type: "play",
+                time: videoPlayer.currentTime,
+            });
+        });
+
         syncPlaybackTime();
 
         configureSenderParameters(call.peerConnection);
@@ -219,17 +234,24 @@ function connectAsReceiver() {
     connection.on("data", async (data: any) => {
         if (data.type === "subtitle") {
             console.log(
-                "Receiveasync d subtitle content from streamer.",
+                "Received subtitle content from streamer.",
                 data.content,
             );
 
-            const url = subtitlesRawToBlobUrl(data.content);
-
             subtitlesRaw = data.content;
-            addSubtitleTrack(url);
+            syncVideo(data.time);
         }
 
         if (data.type === "sync") {
+            syncVideo(data.time);
+        }
+
+        if (data.type === "pause") {
+            videoPlayer.pause();
+        }
+
+        if (data.type === "play") {
+            videoPlayer.play();
             syncVideo(data.time);
         }
     });
