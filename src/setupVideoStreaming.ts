@@ -32,14 +32,13 @@ async function startStreaming() {
 
         // Call the receiver's peer ID
         const call = state.peer.call(peerId, stream);
+        state.calls.set(peerId, call.peerConnection);
 
-        console.log('Successfully called:', peerId);
+        console.log("Successfully called:", peerId);
 
         call.on("error", (err) => {
             console.error("Call error:", err);
         });
-
-        (window as any).call = call;
 
         // Periodically send playback time
         function syncPlaybackTime() {
@@ -58,44 +57,71 @@ async function startStreaming() {
         configureSenderParameters(call.peerConnection);
         configureReceiverParameters(call.peerConnection);
         preferCodec(call.peerConnection, "VP9");
-
-        logStats(call.peerConnection);
     }
+
+    logStats();
 }
 
-function logStats(peerConnection: RTCPeerConnection) {
-    let previousStats: { bytesSent: number; timestamp: number } | null = null;
+function logStats() {
+    let previousStatsByPeer: Map<
+        string,
+        { bytesSent: number; timestamp: number }
+    > = new Map();
 
-    async function calculateBitrate(peerConnection: RTCPeerConnection) {
+    async function calculateBitrate(peerConnection: RTCPeerConnection, peerId: string) {
         const stats = await peerConnection.getStats();
-        stats.forEach((report) => {
-            if (report.type === "outbound-rtp" && report.kind === "video") {
-                const currentBytesSent = report.bytesSent;
-                const currentTimestamp = report.timestamp;
+        let report: any;
 
-                if (previousStats) {
-                    const deltaBytes =
-                        currentBytesSent - previousStats.bytesSent;
-                    const deltaTime =
-                        currentTimestamp - previousStats.timestamp;
-
-                    // Calculate bitrate in bits per second (bps)
-                    const bitrate =
-                        (deltaBytes * 8) / (deltaTime / 1000) / 1_000_000;
-                    bitrateInput.value = bitrate.toFixed(2) + " Mbps";
-                }
-
-                // Update previous stats
-                previousStats = {
-                    bytesSent: currentBytesSent,
-                    timestamp: currentTimestamp,
-                };
+        stats.forEach((_report) => {
+            if (_report.type === "outbound-rtp" && _report.kind === "video") {
+                report = _report;
             }
         });
+
+        if (!report) {
+            return;
+        }
+
+        const currentBytesSent = report.bytesSent;
+        const currentTimestamp = report.timestamp;
+
+        const previousStats = previousStatsByPeer.get(peerId);
+
+        let value;
+        if (previousStats) {
+            const deltaBytes = currentBytesSent - previousStats.bytesSent;
+            const deltaTime = currentTimestamp - previousStats.timestamp;
+
+            // Calculate bitrate in bits per second (bps)
+            const bitrate = (deltaBytes * 8) / (deltaTime / 1000) / 1_000_000;
+
+            value = bitrate;
+        }
+
+        // Update previous stats
+        previousStatsByPeer.set(peerId, {
+            bytesSent: currentBytesSent,
+            timestamp: currentTimestamp,
+        });
+
+        return value;
     }
 
     // Call periodically to monitor bitrate
-    setInterval(() => calculateBitrate(peerConnection), 1000); // Every second
+    setInterval(async () => {
+        let bitrates = [];
+        for (const [peerId, peerConnection] of state.calls) {
+            const bitrate = await calculateBitrate(peerConnection, peerId);
+
+            if (!bitrate) {
+                continue;
+            }
+
+            bitrates.push(bitrate.toFixed(2));
+        }
+        const str = bitrates.join('/') + " Mbps";
+        bitrateInput.value = str;
+    }, 1000); // Every second
 }
 
 function configureSenderParameters(peerConnection: RTCPeerConnection) {

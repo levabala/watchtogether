@@ -37,6 +37,7 @@ export const state = {
     peer: idMy ? new Peer(idMy) : new Peer(),
     connectionToStreamer: null as DataConnection | null,
     connectionsToReceivers: new Map<string, DataConnection>(),
+    calls: new Map<string, RTCPeerConnection>(),
 };
 
 (window as any).state = state;
