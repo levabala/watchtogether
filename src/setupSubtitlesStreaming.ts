@@ -4,9 +4,8 @@ const sendSubtitleButton = document.getElementById(
     "sendSubtitle",
 ) as HTMLButtonElement;
 
-// Send subtitles to the receiver
 function sendSubtitles() {
-    if (!state.connection) {
+    if (!state.connectionsToReceivers.size) {
         console.error("No active connection to a receiver.");
         return;
     }
@@ -20,8 +19,12 @@ function sendSubtitles() {
     const reader = new FileReader();
     reader.onload = () => {
         const subtitleContent = reader.result as string;
-        state.connection?.send({ type: "subtitle", content: subtitleContent });
-        console.log("Sent subtitle content to receiver.");
+        for (const [peerId, connection] of state.connectionsToReceivers) {
+            connection.send({ type: "subtitle", content: subtitleContent });
+            console.log("Sent subtitle content to:", peerId);
+        }
+
+        console.log("Sent subtitle content to the receivers.");
     };
     reader.readAsText(file);
 }

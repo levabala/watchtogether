@@ -18,14 +18,8 @@ async function startStreaming() {
         return;
     }
 
-    if (!state.connection) {
-        console.error("Connection not initialized.");
-        return;
-    }
-
-    const peerId = state.connection.peer;
-    if (!peerId) {
-        console.error("Please enter a Peer ID to connect to.");
+    if (!state.connectionsToReceivers.size) {
+        console.error("No active connection to a receiver.");
         return;
     }
 
@@ -33,34 +27,40 @@ async function startStreaming() {
     const stream = (videoPlayer as any).captureStream();
     console.log("Captured video stream:", stream);
 
-    // Call the receiver's peer ID
-    const call = state.peer.call(peerId, stream);
+    for (const [peerId] of state.connectionsToReceivers) {
+        console.log("Calling:", peerId);
 
-    call.on("error", (err) => {
-        console.error("Call error:", err);
-    });
+        // Call the receiver's peer ID
+        const call = state.peer.call(peerId, stream);
 
-    (window as any).call = call;
+        console.log('Successfully called:', peerId);
 
-    // Periodically send playback time
-    function syncPlaybackTime() {
-        setInterval(() => {
-            if (state.connection && videoPlayer.readyState >= 2) {
-                state.connection.send({
-                    type: "sync",
-                    time: videoPlayer.currentTime,
-                });
-            }
-        }, 500); // Adjust interval as needed
+        call.on("error", (err) => {
+            console.error("Call error:", err);
+        });
+
+        (window as any).call = call;
+
+        // Periodically send playback time
+        function syncPlaybackTime() {
+            setInterval(() => {
+                if (state.connectionToStreamer && videoPlayer.readyState >= 2) {
+                    state.connectionToStreamer.send({
+                        type: "sync",
+                        time: videoPlayer.currentTime,
+                    });
+                }
+            }, 500); // Adjust interval as needed
+        }
+
+        syncPlaybackTime();
+
+        configureSenderParameters(call.peerConnection);
+        configureReceiverParameters(call.peerConnection);
+        preferCodec(call.peerConnection, "VP9");
+
+        logStats(call.peerConnection);
     }
-
-    syncPlaybackTime();
-
-    configureSenderParameters(call.peerConnection);
-    configureReceiverParameters(call.peerConnection);
-    preferCodec(call.peerConnection, "VP9");
-
-    logStats(call.peerConnection);
 }
 
 function logStats(peerConnection: RTCPeerConnection) {
@@ -80,7 +80,8 @@ function logStats(peerConnection: RTCPeerConnection) {
                         currentTimestamp - previousStats.timestamp;
 
                     // Calculate bitrate in bits per second (bps)
-                    const bitrate = (deltaBytes * 8) / (deltaTime / 1000) / 1_000_000;
+                    const bitrate =
+                        (deltaBytes * 8) / (deltaTime / 1000) / 1_000_000;
                     bitrateInput.value = bitrate.toFixed(2) + " Mbps";
                 }
 
@@ -183,7 +184,8 @@ function connectAsReceiver() {
         return;
     }
 
-    const connection = (state.connection = state.peer.connect(peerId));
+    const connection = (state.connectionToStreamer =
+        state.peer.connect(peerId));
 
     connection.on("data", async (data: any) => {
         if (data.type === "subtitle") {

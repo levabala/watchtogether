@@ -35,7 +35,8 @@ if (idTarget) {
 
 export const state = {
     peer: idMy ? new Peer(idMy) : new Peer(),
-    connection: null as DataConnection | null,
+    connectionToStreamer: null as DataConnection | null,
+    connectionsToReceivers: new Map<string, DataConnection>(),
 };
 
 (window as any).state = state;
@@ -49,10 +50,10 @@ function initializePeer() {
         myPeerIdTextarea.value = id;
     });
 
-    // Handle incoming connections (receiver mode)
+    // Handle incoming connections for streamer
     state.peer.on("connection", (conn) => {
         console.log('connection acquired');
-        state.connection = conn;
+        state.connectionsToReceivers.set(conn.peer, conn);
     });
 
     // Handle incoming media streams
